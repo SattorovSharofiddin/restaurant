@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  web_service:
+    build:
+      context: .
+      dockerfile: ./compose/django/Dockerfile
+    ports:
+      - '8000:8001'
+    env_file: env/.env
+    volumes:
+      - static_volume:/static
+      - media_volume:/media
+    depends_on:
+      - postgres
+      - minio
+      - redis
+      #      - mongodb
+#      - elasticsearch
+      - rabbitmq
+
+  postgres:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file: env/.env
+
+  minio:
+    image: minio/minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    env_file: env/.env
+    command: server /data --console-address :9001
+    volumes:
+      - minio_data:/data
+
+#  elasticsearch:
+#    image: elasticsearch:7.14.0
+#    ports:
+#      - '9300:9300'
+#      - '9200:9200'
+#    environment:
+#      - discovery.type=single-node
+#    volumes:
+#      - es_data:/usr/share/elasticsearch/data
+
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+
+  #  mongodb:
+  #    image: mongo:latest
+  #    ports:
+  #      - '27017:27017'
+  #    environment:
+  #      MONGO_INITDB_ROOT_USERNAME: root
+  #      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+  #    volumes:
+  #      - mongodb_data:/data/db
+
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./compose/django/Dockerfile
+    image: celery_worker
+    command: /start-celeryworker
+    volumes:
+      - .:/app
+    env_file:
+      - env/.env
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: ./compose/django/Dockerfile
+    command: /start-celerybeat
+    volumes:
+      - .:/app
+    env_file:
+      - env/.env
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+
+  flower:
+    build:
+      context: .
+      dockerfile: ./compose/django/Dockerfile
+    command: /start-flower
+    volumes:
+      - .:/app
+    ports:
+      - 5557:5555
+    depends_on:
+      - redis
+      - postgres
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./compose/nginx/Dockerfile
+    ports:
+      - '80:80'
+      - '443:443'
+    depends_on:
+      - web_service
+    logging:
+      options:
+        max-size: '10m'
+        max-file: '3'
+    volumes:
+      - static_volume:/static
+      - media_volume:/media
+
+volumes:
+  media_volume:
+  static_volume:
+  postgres_data:
+  minio_data:
+#  es_data:
+#  mongodb_data:
+  redis_data:
