@@ -119,7 +119,7 @@ class PasswordResetSerializer(Serializer):
         token = data['token']
         pk = force_str(urlsafe_base64_decode(data['uid']))
         data['pk'] = pk
-        user = get_object_or_404(User, pk=pk)
+        user = get_object_or_404(Customer, pk=pk)
         if data['password'] != data['confirm_password']:
             raise ValidationError("Passwords do not match.")
         if not pk.isdigit():

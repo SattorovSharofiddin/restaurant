@@ -50,21 +50,6 @@ class CheckVerifyEmailView(GenericAPIView):
             obj = self.serializer_class(data=request.data)
             obj.is_valid(raise_exception=True)
             obj.save()
-            db_data = Customer.objects.filter(email=obj.initial_data['email']).values('id', 'full_name')
-            json_data = {
-                'active': True,
-                'name': db_data[0]['full_name'],
-                'comment': 'string',
-                'watch_lists': [
-                    1,
-                ],
-                'meta': {
-                },
-            }
-
-            token = {'Authorization': 'Token a2e90bbf616f4a5fd33f9a22df9cbc21f7bb4e37b6ff7a54132a18e7482776e0'}
-            url = f"https://faceids.tadi.uz/objects/faces/{db_data[0]['id']}/"
-            httpx.patch(url, headers=token, json=json_data)
         except ValidationError:
             return Response({'message': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': 'Email verified successfully'}, status=status.HTTP_200_OK)
@@ -76,6 +61,7 @@ class PasswordResetView(GenericViewSet):
     parser_classes = FormParser,
 
     @action(['POST'], detail=False, serializer_class=SendPasswordResetLinkSerializer)
+    # TODO: add url to all actions in this class with - instead of _
     def send_email(self, request):
         data = self.serializer_class(data=request.data)
         data.is_valid(raise_exception=True)
@@ -88,7 +74,7 @@ class PasswordResetView(GenericViewSet):
     def reset_password(self, request):
         data = self.serializer_class(data=request.data)
         data.is_valid(raise_exception=True)
-        data.save()
+        validated_data = data.save()
         return Response({'message': 'password reset successfully'})
 
     @action(['POST'], detail=False, serializer_class=CheckPasswordResetTokenSerializer)
