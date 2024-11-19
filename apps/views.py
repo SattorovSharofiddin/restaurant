@@ -1,16 +1,21 @@
-import httpx
 import random
-from rest_framework import viewsets, status
+from itertools import product
+
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.middleware import LoginRequiredMiddleware
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, GenericAPIView, get_object_or_404
+from rest_framework.generics import CreateAPIView, GenericAPIView, get_object_or_404, ListCreateAPIView
 from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from apps.models import Product, Customer
+from apps.models import Product, Customer, Order, Category
 from apps.serializers import ProductModelSerializer, UserRegisterSerializer, SendVerificationEmailSerializer, \
-    VerifyEmailSerializer, SendPasswordResetLinkSerializer, PasswordResetSerializer, CheckPasswordResetTokenSerializer
+    VerifyEmailSerializer, SendPasswordResetLinkSerializer, PasswordResetSerializer, CheckPasswordResetTokenSerializer, \
+    OrderModelSerializer, CategoryModelSerializer
 from apps.tasks import send_email
 
 
@@ -83,6 +88,62 @@ class PasswordResetView(GenericViewSet):
         return Response({'message': 'token is valid'})
 
 
-class ProductModelViewSet(viewsets.ModelViewSet):
+class QRCodeView(GenericAPIView):
+    serializer_class = None
+
+    def get(self, request):
+        url = 'http://localhost:8000/api/products/'
+        if not url:
+            return Response({'message': 'URL is required'}, status.HTTP_400_BAD_REQUEST)
+        qr_code = f'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={url}'
+        return Response({'qr_code': qr_code})
+
+
+class ProductModelViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductModelSerializer
+
+
+class OrderModelViewSet(ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderModelSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(methods=['POST'], detail=False)
+    def checkout(self, request):
+        customer = request.user
+        products = request.data.get('products')
+        if not products:
+            return Response(
+                {'error': 'Products are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            product_instances = Product.objects.filter(id__in=products)
+            if product_instances.count() != len(products):
+                return Response(
+                    {'error': 'One or more products do not exist'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Product.DoesNotExist:
+            return Response(
+                {'error': 'Invalid product IDs'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order = Order.objects.create(customer_id=customer)
+        order.products.set(product_instances)
+        return Response({'message': 'Order created successfully'}, status=status.HTTP_201_CREATED)
+
+    @action(methods=['GET'], detail=False)
+    def get_orders(self, request):
+        customer = request.user
+        orders = Order.objects.filter(customer_id=customer)
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
+
+
+class CategoryApiView(ListCreateAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategoryModelSerializer

@@ -3,11 +3,11 @@ from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import CharField, FileField, EmailField, IntegerField
+from rest_framework.fields import CharField, FileField, EmailField, IntegerField, HiddenField, CurrentUserDefault
 from rest_framework.serializers import ModelSerializer, Serializer
 from django.core.cache import cache
 
-from apps.models import Product, Order, Customer
+from apps.models import Product, Order, Customer, Category
 
 
 class ProductModelSerializer(ModelSerializer):
@@ -17,10 +17,22 @@ class ProductModelSerializer(ModelSerializer):
 
 
 class OrderModelSerializer(ModelSerializer):
-    products = ProductModelSerializer(many=True)
+    customer = HiddenField(default=CurrentUserDefault())
 
     class Meta:
         model = Order
+        fields = ('customer', 'products', 'created_at', 'updated_at')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['products'] = ProductModelSerializer(instance.products.all(), many=True).data
+        data['total_price'] = sum([product.price for product in instance.products.all()])
+        return data
+
+
+class CategoryModelSerializer(ModelSerializer):
+    class Meta:
+        model = Category
         fields = '__all__'
 
 

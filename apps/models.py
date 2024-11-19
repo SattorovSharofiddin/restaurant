@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.template.context_processors import request
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
@@ -7,7 +8,7 @@ from apps.managers import CustomUserManager
 
 
 class Customer(AbstractUser):
-    name = models.CharField(max_length=50)
+    full_name = models.CharField(max_length=50, null=True, blank=True)
     email = models.EmailField(max_length=50, unique=True)
     password = models.CharField(max_length=50)
     is_active = models.BooleanField(
@@ -39,13 +40,9 @@ class Product(models.Model):
 class Order(models.Model):
     customer_id = models.ForeignKey(Customer, on_delete=models.CASCADE)
     products = models.ManyToManyField(Product)
-    total_price = models.DecimalField()
+    total_price = models.DecimalField(null=True, blank=True, max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ("-created_at",)
-
-    @cached_property
-    def total_price(self):
-        return sum([product.price for product in self.products.all()])
