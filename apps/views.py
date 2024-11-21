@@ -1,12 +1,11 @@
 import random
-from itertools import product
 
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.middleware import LoginRequiredMiddleware
+import httpx
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, GenericAPIView, get_object_or_404, ListCreateAPIView
+from rest_framework.mixins import CreateModelMixin
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -104,7 +103,7 @@ class ProductModelViewSet(ModelViewSet):
     serializer_class = ProductModelSerializer
 
 
-class OrderModelViewSet(ModelViewSet):
+class OrderModelViewSet(GenericViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderModelSerializer
     permission_classes = [IsAuthenticated]
@@ -134,6 +133,30 @@ class OrderModelViewSet(ModelViewSet):
 
         order = Order.objects.create(customer_id=customer)
         order.products.set(product_instances)
+
+        bot_token = "7243224143:AAEDkoA3rwfpZycRd2Croyh2R9xzd_Oiyt8"
+
+        chat_id = "chat_id"
+        message = (
+            f"New Order Created!\n"
+            f"Customer: {customer.username}\n"
+            f"Order ID: {order.id}\n"
+            f"Products: {[product.name for product in product_instances]}"
+        )
+
+        try:
+            with httpx.Client() as client:
+                response = client.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": chat_id, "text": message}
+                )
+                response.raise_for_status()
+        except httpx.RequestError as exc:
+            return Response(
+                {'error': 'Failed to send notification to bot', 'details': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
         return Response({'message': 'Order created successfully'}, status=status.HTTP_201_CREATED)
 
     @action(methods=['GET'], detail=False)
