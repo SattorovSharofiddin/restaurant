@@ -1,3 +1,4 @@
+import os
 import random
 
 import httpx
@@ -134,14 +135,19 @@ class OrderModelViewSet(GenericViewSet):
         order = Order.objects.create(customer_id=customer)
         order.products.set(product_instances)
 
+        # bot_token = f"{os.getenv('BOT_TOKEN')}"
         bot_token = "7243224143:AAEDkoA3rwfpZycRd2Croyh2R9xzd_Oiyt8"
 
-        chat_id = "chat_id"
+        # chat_id = f"{os.getenv('CHAT_ID')}"
+        chat_id = "-4520930282"
+
         message = (
             f"New Order Created!\n"
             f"Customer: {customer.username}\n"
             f"Order ID: {order.id}\n"
-            f"Products: {[product.name for product in product_instances]}"
+            f"Products: {[product.name for product in product_instances]}\n"
+            f"Total Price: {sum([product.price for product in product_instances])}\n"
+            f"Created At: {order.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
         )
 
         try:
