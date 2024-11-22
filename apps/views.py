@@ -1,7 +1,9 @@
+import os
 import random
 from datetime import datetime
 
 import httpx
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -11,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
+from apps.filters import CategoryFilter
 from apps.models import Product, Customer, Order, Category
 from apps.models_mongodb import RealTimeOrder
 from apps.serializers import ProductModelSerializer, UserRegisterSerializer, SendVerificationEmailSerializer, \
@@ -102,6 +105,8 @@ class QRCodeView(GenericAPIView):
 class CategoryApiView(ListCreateAPIView):
     queryset = Category.objects.all().prefetch_related('products')
     serializer_class = CategoryModelSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = CategoryFilter
 
 
 class ProductModelViewSet(ModelViewSet):
@@ -190,8 +195,8 @@ class RealTimeOrderAPIView(GenericViewSet):
             f"Created At: {datetime.fromisoformat(order_serialized['create_at']).replace(tzinfo=None, microsecond=0)}"
         )
 
-        bot_token = "7243224143:AAEDkoA3rwfpZycRd2Croyh2R9xzd_Oiyt8"
-        chat_id = "-4520930282"
+        bot_token = os.getenv('TELEGRAM_TOKEN')
+        chat_id = os.getenv('TELEGRAM_CHAT_ID')
 
         try:
             with httpx.Client() as client:

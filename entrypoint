@@ -14,12 +14,4 @@ fi
 python manage.py makemigrations
 python manage.py migrate
 python manage.py collectstatic --noinput
-gunicorn root.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 4
-until cd /app/backend
-
-do
-    echo "Waiting for server volume..."
-done
-
-# run a worker :)
-celery -A backend worker --loglevel=info --concurrency 1 -E
+gunicorn root.wsgi:application --bind 0.0.0.0:8000

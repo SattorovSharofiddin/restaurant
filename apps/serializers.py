@@ -40,9 +40,9 @@ class CategoryModelSerializer(ModelSerializer):
 
 
 class UserRegisterSerializer(ModelSerializer):
-    full_name = CharField(write_only=True)
-    password = CharField(write_only=True)
-    confirm_password = CharField(write_only=True)
+    full_name = CharField(write_only=True, max_length=250)
+    password = CharField(write_only=True, max_length=250)
+    confirm_password = CharField(write_only=True, max_length=250)
 
     class Meta:
         model = Customer
@@ -79,7 +79,7 @@ class VerifyEmailSerializer(Serializer):
         user = Customer.objects.get(email=email)
         cache_user_id = cache.get(user.id)
         if user.is_active or code != cache_user_id:
-            cache.delete(user.id)  # TODO user id viewga ham borishi kerak
+            cache.delete(user.id)
             raise ValidationError("Invalid code.")
         return data
 

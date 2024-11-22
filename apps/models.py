@@ -7,9 +7,9 @@ from apps.managers import CustomUserManager
 
 class Customer(AbstractUser):
     username = None
-    full_name = models.CharField(max_length=50, null=True, blank=True)
-    email = models.EmailField(max_length=50, unique=True)
-    password = models.CharField(max_length=50)
+    full_name = models.CharField(max_length=100, null=True, blank=True)
+    email = models.EmailField(max_length=100, unique=True)
+    password = models.CharField(max_length=250)
     is_active = models.BooleanField(
         _("active"),
         default=False,
