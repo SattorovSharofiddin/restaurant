@@ -6,6 +6,7 @@ from apps.managers import CustomUserManager
 
 
 class Customer(AbstractUser):
+    username = None
     full_name = models.CharField(max_length=50, null=True, blank=True)
     email = models.EmailField(max_length=50, unique=True)
     password = models.CharField(max_length=50)
@@ -32,7 +33,7 @@ class Product(models.Model):
     name = models.CharField(max_length=100)
     price = models.FloatField()
 
-    category_id = models.ForeignKey(Category, on_delete=models.CASCADE)
+    category_id = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
 
 
 class Order(models.Model):

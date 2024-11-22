@@ -1,21 +1,21 @@
-import os
 import random
+from datetime import datetime
 
 import httpx
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import CreateAPIView, GenericAPIView, get_object_or_404, ListCreateAPIView
-from rest_framework.mixins import CreateModelMixin
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from apps.models import Product, Customer, Order, Category
+from apps.models_mongodb import RealTimeOrder
 from apps.serializers import ProductModelSerializer, UserRegisterSerializer, SendVerificationEmailSerializer, \
     VerifyEmailSerializer, SendPasswordResetLinkSerializer, PasswordResetSerializer, CheckPasswordResetTokenSerializer, \
-    OrderModelSerializer, CategoryModelSerializer
+    OrderModelSerializer, CategoryModelSerializer, RealTimeOrderModelSerializer
 from apps.tasks import send_email
 
 
@@ -39,7 +39,7 @@ class SendVerificationAPIView(GenericAPIView):
         except Customer.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        send_email.delay(
+        send_email(
             user.full_name, user.email, user.pk, random.randint(100_000, 999_999)
         )
         return Response({'message': 'Email sent successfully'})
@@ -72,7 +72,7 @@ class PasswordResetView(GenericViewSet):
         data.is_valid(raise_exception=True)
         validated_data = data.save()
         validated_data['host'] = request.get_host()
-        send_email.delay(**validated_data)
+        send_email(**validated_data)
         return Response({'message': 'reset password link sent successfully'})
 
     @action(['PATCH'], detail=False, serializer_class=PasswordResetSerializer)
@@ -92,11 +92,16 @@ class QRCodeView(GenericAPIView):
     serializer_class = None
 
     def get(self, request):
-        url = 'http://localhost:8000/api/products/'
+        url = 'http://localhost:8000/api/category/'
         if not url:
             return Response({'message': 'URL is required'}, status.HTTP_400_BAD_REQUEST)
         qr_code = f'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={url}'
         return Response({'qr_code': qr_code})
+
+
+class CategoryApiView(ListCreateAPIView):
+    queryset = Category.objects.all().prefetch_related('products')
+    serializer_class = CategoryModelSerializer
 
 
 class ProductModelViewSet(ModelViewSet):
@@ -135,20 +140,58 @@ class OrderModelViewSet(GenericViewSet):
         order = Order.objects.create(customer_id=customer)
         order.products.set(product_instances)
 
-        # bot_token = f"{os.getenv('BOT_TOKEN')}"
-        bot_token = "7243224143:AAEDkoA3rwfpZycRd2Croyh2R9xzd_Oiyt8"
+        RealTimeOrder.objects.create(
+            order_id=order.id,
+            customer_name=order.customer_id.full_name,
+            customer_id=order.customer_id.id,
+            total_price=sum([product.price for product in product_instances]),
+            products=[product.name for product in product_instances],
+        )
 
-        # chat_id = f"{os.getenv('CHAT_ID')}"
-        chat_id = "-4520930282"
+        return Response({'message': 'Order created successfully'}, status=status.HTTP_201_CREATED)
+
+    @action(methods=['GET'], detail=False)
+    def get_orders(self, request):
+        customer = request.user
+        orders = Order.objects.filter(customer_id=customer)
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
+
+
+class RealTimeOrderAPIView(GenericViewSet):
+    queryset = RealTimeOrder.objects.all()
+    serializer_class = RealTimeOrderModelSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(methods=['GET'], detail=False)
+    def get_mongodb_order(self, request, *args, **kwargs):
+        order = RealTimeOrder.objects.filter(customer_id=request.user.id).first()
+        if order:
+            serialized_order = self.serializer_class(order)
+            return Response(serialized_order.data)
+
+        return Response({"detail": "No orders found."}, status=404)
+
+    @action(methods=['GET'], detail=False)
+    def check_mongodb_order(self, request):
+        order = RealTimeOrder.objects.filter(customer_id=request.user.id).first()
+        if order:
+            serialized_order = self.serializer_class(order)
+            order_serialized = serialized_order.data
+        else:
+            return Response({'error': 'Invalid order data'}, status=status.HTTP_400_BAD_REQUEST)
 
         message = (
             f"New Order Created!\n"
-            f"Customer: {customer.username}\n"
-            f"Order ID: {order.id}\n"
-            f"Products: {[product.name for product in product_instances]}\n"
-            f"Total Price: {sum([product.price for product in product_instances])}\n"
-            f"Created At: {order.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+            f"Customer: {order_serialized['customer_name']}\n"
+            f"Order ID: {order_serialized['order_id']}\n"
+            f"Products: {''.join(order_serialized['products'])}\n"
+            f"Total Price: {order_serialized['total_price']}\n"
+            f"Created At: {datetime.fromisoformat(order_serialized['create_at']).replace(tzinfo=None, microsecond=0)}"
         )
+
+        bot_token = "7243224143:AAEDkoA3rwfpZycRd2Croyh2R9xzd_Oiyt8"
+        chat_id = "-4520930282"
 
         try:
             with httpx.Client() as client:
@@ -163,16 +206,4 @@ class OrderModelViewSet(GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        return Response({'message': 'Order created successfully'}, status=status.HTTP_201_CREATED)
-
-    @action(methods=['GET'], detail=False)
-    def get_orders(self, request):
-        customer = request.user
-        orders = Order.objects.filter(customer_id=customer)
-        serializer = self.get_serializer(orders, many=True)
-        return Response(serializer.data)
-
-
-class CategoryApiView(ListCreateAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategoryModelSerializer
+        return Response({'message': 'Notification sent successfully'}, status=status.HTTP_200_OK)

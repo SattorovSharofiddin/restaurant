@@ -1,19 +1,20 @@
 from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import CharField, FileField, EmailField, IntegerField, HiddenField, CurrentUserDefault
+from rest_framework.fields import CharField, EmailField, IntegerField, HiddenField, CurrentUserDefault
 from rest_framework.serializers import ModelSerializer, Serializer
-from django.core.cache import cache
 
 from apps.models import Product, Order, Customer, Category
+from apps.models_mongodb import RealTimeOrder
 
 
 class ProductModelSerializer(ModelSerializer):
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = ('id', 'name', 'price')
 
 
 class OrderModelSerializer(ModelSerializer):
@@ -31,20 +32,21 @@ class OrderModelSerializer(ModelSerializer):
 
 
 class CategoryModelSerializer(ModelSerializer):
+    products = ProductModelSerializer(many=True, read_only=True)
+
     class Meta:
         model = Category
-        fields = '__all__'
+        fields = ('name', 'products')
 
 
 class UserRegisterSerializer(ModelSerializer):
     full_name = CharField(write_only=True)
     password = CharField(write_only=True)
     confirm_password = CharField(write_only=True)
-    main_video = FileField()
 
     class Meta:
         model = Customer
-        fields = ('full_name', 'email', 'password', 'confirm_password', 'main_video')
+        fields = ('full_name', 'email', 'password', 'confirm_password')
 
     def validate(self, data):
         if Customer.objects.filter(email=data['email']).exists():
@@ -148,3 +150,9 @@ class PasswordResetSerializer(Serializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+
+class RealTimeOrderModelSerializer(ModelSerializer):
+    class Meta:
+        model = RealTimeOrder
+        fields = ['order_id', 'customer_name', 'total_price', 'products', 'create_at']

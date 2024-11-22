@@ -3,9 +3,9 @@ import os
 from celery import Celery
 from django.conf import settings
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'root.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'root.settings', broker_connection_retry_on_startup=True)
 
-app = Celery('pressa')
+app = Celery('main', broker='redis://localhost:6379/0')
 app.conf.enable_utc = False
 
 app.config_from_object(settings, namespace='CELERY')

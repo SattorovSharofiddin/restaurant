@@ -26,6 +26,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_yasg',
+    'celery',
+    'django_filters',
 
     'apps',
 ]
@@ -38,6 +40,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'root.urls'
@@ -75,9 +78,16 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    'mongo': {
+        'ENGINE': 'djongo',
+        'NAME': 'restaurant',
+        'CLIENT': {
+            'host': 'localhost',
+            'port': 27017,
+        }
     }
 }
-
 
 # DATABASES = {
 #     'default': {

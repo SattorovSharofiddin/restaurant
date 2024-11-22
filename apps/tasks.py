@@ -6,7 +6,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
 
-@shared_task()
+# @shared_task()
 def send_email(
         full_name: str, email: str,
         pk: int, code: int = None,
