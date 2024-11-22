@@ -14,7 +14,6 @@ urlpatterns = [
     path('', include(router.urls)),
 
     path('qr/', QRCodeView.as_view(), name='qr'),
-    # path('order/', OrderModelViewSet.as_view(), name='order'),
     path('category/', CategoryApiView.as_view(), name='category'),
 
     path('register', RegisterView.as_view(), name='register'),
