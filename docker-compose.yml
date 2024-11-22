@@ -18,8 +18,7 @@ services:
       - redis
     env_file:
       - env/.env
-    networks:
-      - app-network
+
 
   db:
     image: postgres:15-alpine
@@ -30,8 +29,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app-network
+
 
   mongo:
     image: mongo:6.0
@@ -49,13 +47,10 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
+
 volumes:
   postgres_data:
   mongodata:
   static:
   media:
   redis_data:
-
-networks:
-  app-network:
-    driver: bridge
