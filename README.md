@@ -9,25 +9,40 @@ mkdir env
 cd env
 touch .env
 ```
+env:
+```
+# django
+SECRET_KEY=''
 
-Virtual muhitni o'rnatish va aktivlashtirish:
-```bash
-$ python3 -m venv venv && source venv/bin/activate
+#redis
+REDIS_HOST=redis
+
+# postgres
+DB_ENGINE=django.db.backends.postgresql_psycopg2
+POSTGRES_USER=
+POSTGRES_DB=
+POSTGRES_PASSWORD=
+POSTGRES_HOST=
+POSTGRES_PORT=
+DATABASE_URL=
+
+#email
+EMAIL_BACKEND=
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_USE_TLS=
+
+#telegram
+TELEGRAM_TOKEN=
+TELEGRAM_CHAT_ID=
+
+#mongodb
+MONGO_URL=
+MONGO_PORT=
+MONGO_DB_NAME=
 ```
 
-Kutubhonalarni o'rnatish (Makefile pluginini o'rnatilganini tekshiring):
 
-![image](https://github.com/user-attachments/assets/2f17480d-8443-4fc1-9655-b42b611ef730)
-
-```bash
-(venv)$ make req
-```
-Migratsiyalarni amalga oshirish:
-```bash
-(venv)$ python manage.py migrate
-```
-Run the server:
-```bash
-(venv)$ python manage.py runserver
-```
-Navigate to http://localhost:8000/ in your favorite web browser.
+http://localhost:8000/
