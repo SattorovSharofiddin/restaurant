@@ -45,4 +45,9 @@ MONGO_DB_NAME=
 ```
 
 
+Docker-compose orqali ishga tushirish:
+```
+$ docker-compose up --build
+```
+
 http://localhost:8000/
