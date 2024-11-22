@@ -3,6 +3,12 @@ Repozitoryni clone qilish:
 ```bash
 $ git clone https://github.com/SattorovSharofiddin/restaurant.git .
 ```
+env papkasi yaratish va ushbu papka ichida .env faylini yaratish:
+```bash
+mkdir env
+cd env
+touch .env
+```
 
 Virtual muhitni o'rnatish va aktivlashtirish:
 ```bash
