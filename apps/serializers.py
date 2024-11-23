@@ -14,7 +14,7 @@ from apps.models_mongodb import RealTimeOrder
 class ProductModelSerializer(ModelSerializer):
     class Meta:
         model = Product
-        fields = ('id', 'name', 'price')
+        fields = ('id', 'name', 'price', 'category_id')
 
 
 class OrderModelSerializer(ModelSerializer):
